@@ -30,7 +30,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<Inference
 
     const client = new Anthropic({
       baseURL: gatewayUrl,
-      apiKey: posthogApiKey,
+      apiKey: posthogApiKey, // Not used but required by SDK
+      defaultHeaders: {
+        Authorization: `Bearer ${posthogApiKey}`,
+      },
     });
 
     const message = await client.messages.create({
