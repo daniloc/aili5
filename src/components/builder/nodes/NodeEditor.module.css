@@ -322,3 +322,74 @@
   height: 14px;
   cursor: pointer;
 }
+
+/* Genie chat specific styles */
+.genieChatContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--foreground) 15%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
+  padding: 0.75rem;
+  max-height: 400px;
+}
+
+.genieMessages {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  overflow-y: auto;
+  min-height: 150px;
+  max-height: 250px;
+  padding-bottom: 0.5rem;
+}
+
+.genieMessage {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.genieMessageUser {
+  align-items: flex-end;
+}
+
+.genieMessageAssistant {
+  align-items: flex-start;
+}
+
+.genieMessageLabel {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--foreground) 60%, transparent);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.genieMessageContent {
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  word-break: break-word;
+  max-width: 85%;
+}
+
+.genieMessageUser .genieMessageContent {
+  background: color-mix(in srgb, var(--foreground) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--foreground) 20%, transparent);
+}
+
+.genieMessageAssistant .genieMessageContent {
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--foreground) 15%, transparent);
+}
+
+.genieInputContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border-top: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
+  padding-top: 0.75rem;
+}

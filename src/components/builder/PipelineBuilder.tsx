@@ -21,11 +21,13 @@ import type {
   IconOutput,
   ColorOutput,
   GaugeOutput,
+  GenieConfig,
+  GenieOutput,
   InferenceConfig,
   SystemPromptConfig,
 } from "@/types/pipeline";
 import { getToolsForDownstreamNodes } from "@/lib/tools";
-import { generateBlockMetadata } from "@/lib/blockParsers";
+import { generateBlockMetadata, parseBlockOutput } from "@/lib/blockParsers";
 import { ModulePalette, MODULE_DEFINITIONS } from "./ModulePalette";
 import { PipelineCanvas } from "./PipelineCanvas";
 import styles from "./PipelineBuilder.module.css";
@@ -62,6 +64,14 @@ function getDefaultConfig(type: NodeType): NodeConfigByType[NodeType] {
       return { showResponse: true };
     case "survey":
       return { style: "buttons" };
+    case "genie":
+      return {
+        name: "genie",
+        backstory: "You are a helpful genie.",
+        model: "claude-sonnet-4-20250514",
+        temperature: 0.7,
+        autoRespondOnUpdate: false,
+      };
     default:
       return {} as NodeConfigByType[NodeType];
   }
@@ -85,6 +95,10 @@ export function PipelineBuilder() {
 
   // Loading state for inference
   const [loadingNodeId, setLoadingNodeId] = useState<string | null>(null);
+
+  // Genie-specific state
+  const [genieConversations, setGenieConversations] = useState<Record<string, GenieOutput>>({});
+  const [genieBackstoryUpdates, setGenieBackstoryUpdates] = useState<Record<string, boolean>>({});
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -168,6 +182,17 @@ export function PipelineBuilder() {
       delete next[id];
       return next;
     });
+    // Clean up genie state
+    setGenieConversations((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    setGenieBackstoryUpdates((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
   }, []);
 
   const handleConfigChange = useCallback(
@@ -181,6 +206,249 @@ export function PipelineBuilder() {
 
   const handleUserInputChange = useCallback((nodeId: string, value: string) => {
     setUserInputs((prev) => ({ ...prev, [nodeId]: value }));
+  }, []);
+
+  // Format genie conversation as context string
+  const formatGenieContext = useCallback((genieName: string, backstory: string, messages: GenieOutput["messages"]): string => {
+    let context = `\n\nGenie Context (name: ${genieName}):\n[Backstory: ${backstory}]\n\nConversation:\n`;
+    for (const msg of messages) {
+      if (msg.role === "user") {
+        context += `User: ${msg.content}\n`;
+      } else {
+        context += `${genieName}: ${msg.content}\n`;
+      }
+    }
+    return context;
+  }, []);
+
+  // Build system prompt from preceding nodes (shared logic)
+  const buildSystemPromptFromPrecedingNodes = useCallback(
+    (
+      nodeIndex: number,
+      additionalPrompt?: string,
+      includeGenieConversations: boolean = true
+    ): string => {
+      const precedingNodes = nodes.slice(0, nodeIndex);
+
+      // Find system prompt from preceding nodes
+      const systemPromptNode = precedingNodes.find((n) => n.type === "system_prompt");
+      let systemPrompt = systemPromptNode
+        ? (systemPromptNode.config as SystemPromptConfig).prompt
+        : "";
+
+      // Add additional prompt if provided
+      if (additionalPrompt) {
+        if (systemPrompt) {
+          systemPrompt += "\n\n";
+        }
+        systemPrompt += additionalPrompt;
+      }
+
+      // Add context from preceding genie nodes
+      if (includeGenieConversations) {
+        for (const node of precedingNodes) {
+          if (node.type === "genie") {
+            const genieConfig = node.config as GenieConfig;
+            const conversation = genieConversations[node.id];
+            if (conversation && conversation.messages.length > 0) {
+              const genieContext = formatGenieContext(
+                genieConfig.name,
+                genieConfig.backstory,
+                conversation.messages
+              );
+              systemPrompt += genieContext;
+            }
+          } else {
+            // Add block metadata for other node types
+            const metadata = generateBlockMetadata(node.type, node.config, node.id);
+            if (metadata) {
+              systemPrompt += metadata;
+            }
+          }
+        }
+      }
+
+      return systemPrompt;
+    },
+    [nodes, genieConversations, formatGenieContext]
+  );
+
+  // Handle genie self-inference (independent from main pipeline)
+  const handleGenieSelfInference = useCallback(
+    async (nodeId: string, userMessage: string) => {
+      const genieNode = nodes.find((n) => n.id === nodeId);
+      if (!genieNode || genieNode.type !== "genie") return;
+
+      const genieNodeIndex = nodes.findIndex((n) => n.id === nodeId);
+      const genieConfig = genieNode.config as GenieConfig;
+      const conversation = genieConversations[nodeId] || { messages: [] };
+
+      // Build genie's own identity prompt
+      let genieIdentityPrompt = `You are ${genieConfig.name}. Act as ${genieConfig.name} would act. ${genieConfig.backstory}`;
+
+      // Add this genie's own conversation history if it exists
+      if (conversation.messages.length > 0) {
+        genieIdentityPrompt += "\n\nYour previous conversation:\n";
+        for (const msg of conversation.messages) {
+          if (msg.role === "user") {
+            genieIdentityPrompt += `User: ${msg.content}\n`;
+          } else {
+            genieIdentityPrompt += `${genieConfig.name}: ${msg.content}\n`;
+          }
+        }
+      }
+
+      // Build system prompt from preceding nodes + genie identity
+      const systemPrompt = buildSystemPromptFromPrecedingNodes(
+        genieNodeIndex,
+        genieIdentityPrompt,
+        true // Include other genie conversations
+      );
+
+      setLoadingNodeId(nodeId);
+
+      try {
+        const response = await fetch("/api/inference", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            systemPrompt,
+            userMessage,
+            model: genieConfig.model,
+            temperature: genieConfig.temperature,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (data.error) {
+          console.error("Genie inference error:", data.error);
+          return;
+        }
+
+        // Update conversation with user message and assistant response
+        const updatedMessages = [
+          ...conversation.messages,
+          { role: "user" as const, content: userMessage },
+          { role: "assistant" as const, content: data.response },
+        ];
+
+        setGenieConversations((prev) => ({
+          ...prev,
+          [nodeId]: {
+            messages: updatedMessages,
+          },
+        }));
+      } catch (error) {
+        console.error("Failed to run genie inference:", error);
+      } finally {
+        setLoadingNodeId(null);
+      }
+    },
+    [nodes, genieConversations, buildSystemPromptFromPrecedingNodes]
+  );
+
+  // Process genie backstory updates from inference response
+  const processGenieBackstoryUpdates = useCallback(
+    (precedingNodes: PipelineNodeConfig[], response: any) => {
+      for (const node of precedingNodes) {
+        if (node.type === "genie") {
+          const update = parseBlockOutput<{ backstory?: string; shouldAutoRespond?: boolean }>(
+            "genie",
+            response,
+            node.id
+          );
+          if (update?.backstory) {
+            // Update genie config
+            const genieConfig = node.config as GenieConfig;
+            setNodes((prev) =>
+              prev.map((n) =>
+                n.id === node.id
+                  ? { ...n, config: { ...genieConfig, backstory: update.backstory! } }
+                  : n
+              )
+            );
+            // Show notification
+            setGenieBackstoryUpdates((prev) => ({ ...prev, [node.id]: true }));
+            // Auto-respond if enabled
+            if (update.shouldAutoRespond && genieConfig.autoRespondOnUpdate) {
+              setTimeout(() => {
+                handleGenieSelfInference(node.id, "Your backstory has been updated. Say something new.");
+              }, 500);
+            }
+          }
+        }
+      }
+    },
+    [handleGenieSelfInference]
+  );
+
+  // Handle saving genie backstory (triggers initial response)
+  const handleGenieSaveBackstory = useCallback(
+    async (nodeId: string) => {
+      const genieNode = nodes.find((n) => n.id === nodeId);
+      if (!genieNode || genieNode.type !== "genie") return;
+
+      const genieNodeIndex = nodes.findIndex((n) => n.id === nodeId);
+      const genieConfig = genieNode.config as GenieConfig;
+
+      // Build genie's identity prompt with introduction request
+      const genieIdentityPrompt = `You are ${genieConfig.name}. Act as ${genieConfig.name} would act. ${genieConfig.backstory}. Introduce yourself.`;
+
+      // Build system prompt from preceding nodes + genie identity
+      const systemPrompt = buildSystemPromptFromPrecedingNodes(
+        genieNodeIndex,
+        genieIdentityPrompt,
+        true // Include other genie conversations
+      );
+
+      setLoadingNodeId(nodeId);
+
+      try {
+        const response = await fetch("/api/inference", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            systemPrompt,
+            userMessage: "Introduce yourself.",
+            model: genieConfig.model,
+            temperature: genieConfig.temperature,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (data.error) {
+          console.error("Genie introduction error:", data.error);
+          return;
+        }
+
+        // Initialize conversation with introduction
+        setGenieConversations((prev) => ({
+          ...prev,
+          [nodeId]: {
+            messages: [
+              { role: "user", content: "Introduce yourself." },
+              { role: "assistant", content: data.response },
+            ],
+          },
+        }));
+      } catch (error) {
+        console.error("Failed to get genie introduction:", error);
+      } finally {
+        setLoadingNodeId(null);
+      }
+    },
+    [nodes, genieConversations, buildSystemPromptFromPrecedingNodes]
+  );
+
+  // Handle clearing update notification
+  const handleGenieClearUpdate = useCallback((nodeId: string) => {
+    setGenieBackstoryUpdates((prev) => {
+      const next = { ...prev };
+      delete next[nodeId];
+      return next;
+    });
   }, []);
 
   const handleRunInference = useCallback(
@@ -201,23 +469,15 @@ export function PipelineBuilder() {
       // Gather context from preceding nodes
       const precedingNodes = nodes.slice(0, nodeIndex);
 
-      // Find system prompt
-      const systemPromptNode = precedingNodes.find((n) => n.type === "system_prompt");
-      let systemPrompt = systemPromptNode
-        ? (systemPromptNode.config as SystemPromptConfig).prompt
-        : "You are a helpful assistant.";
-
       // Get tools for preceding output nodes
       const { tools, nodeIdByToolName } = getToolsForDownstreamNodes(nodes, nodeIndex);
 
-      // Generate block metadata from output nodes and append to system prompt
-      // This tells the LLM what output blocks are available and how to use them
-      for (const node of precedingNodes) {
-        const metadata = generateBlockMetadata(node.type, node.config, node.id);
-        if (metadata) {
-          systemPrompt += metadata;
-        }
-      }
+      // Build system prompt from preceding nodes (includes genie conversations and block metadata)
+      const systemPrompt = buildSystemPromptFromPrecedingNodes(
+        nodeIndex,
+        undefined, // No additional prompt needed
+        true // Include genie conversations
+      ) || "You are a helpful assistant.";
 
       setLoadingNodeId(inferenceNodeId);
 
@@ -265,13 +525,16 @@ export function PipelineBuilder() {
             setOutputs((prev) => ({ ...prev, ...newOutputs }));
           }
         }
+
+        // Process genie backstory updates
+        processGenieBackstoryUpdates(precedingNodes, data);
       } catch (error) {
         console.error("Failed to run inference:", error);
       } finally {
         setLoadingNodeId(null);
       }
     },
-    [nodes, userInputs]
+    [nodes, userInputs, buildSystemPromptFromPrecedingNodes, processGenieBackstoryUpdates]
   );
 
   // Find module info for drag overlay
@@ -297,6 +560,11 @@ export function PipelineBuilder() {
           loadingNodeId={loadingNodeId}
           outputs={outputs}
           activeNodeId={activeId}
+          genieConversations={genieConversations}
+          onGenieSelfInference={handleGenieSelfInference}
+          onGenieSaveBackstory={handleGenieSaveBackstory}
+          genieBackstoryUpdates={genieBackstoryUpdates}
+          onGenieClearUpdate={handleGenieClearUpdate}
         />
         <ModulePalette />
       </div>

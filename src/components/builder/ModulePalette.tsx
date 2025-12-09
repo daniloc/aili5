@@ -11,6 +11,7 @@ import {
   Grid3X3,
   Webhook,
   ClipboardList,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 import type { NodeType } from "@/types/pipeline";
@@ -102,6 +103,14 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
     category: "output",
     color: COLORS.red,
   },
+  {
+    type: "genie",
+    name: "Genie",
+    description: "Self-inferencing agent",
+    icon: Sparkles,
+    category: "input",
+    color: "#F59E0B", // amber/gold
+  },
 ];
 
 interface DraggableModuleProps {
@@ -128,6 +137,7 @@ function DraggableModule({ module }: DraggableModuleProps) {
       } as React.CSSProperties}
       {...listeners}
       {...attributes}
+      suppressHydrationWarning
     >
       <div className={styles.moduleIcon}>
         <Icon size={18} />

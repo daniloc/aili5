@@ -24,7 +24,8 @@ export type NodeType =
   | "gauge_display"
   | "pixel_art_display"
   | "webhook_trigger"
-  | "survey";
+  | "survey"
+  | "genie";
 
 // ─────────────────────────────────────────────────────────────────
 // Node Configuration Types
@@ -97,6 +98,19 @@ export interface SurveyConfig {
   style?: "buttons" | "radio" | "dropdown";
 }
 
+export interface GenieConfig {
+  /** The genie's name (e.g., "luke", "sophia", "zap") */
+  name: string;
+  /** Initial prompt/backstory for the genie */
+  backstory: string;
+  /** Model to use for self-inference */
+  model: string;
+  /** Temperature setting */
+  temperature: number;
+  /** Whether to auto-respond when backstory is updated */
+  autoRespondOnUpdate?: boolean;
+}
+
 // Map node types to their config types
 export interface NodeConfigByType {
   system_prompt: SystemPromptConfig;
@@ -109,6 +123,7 @@ export interface NodeConfigByType {
   pixel_art_display: PixelArtDisplayConfig;
   webhook_trigger: WebhookTriggerConfig;
   survey: SurveyConfig;
+  genie: GenieConfig;
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -244,11 +259,18 @@ export interface InferenceRequest {
   userMessage: string;
   model: string;
   temperature: number;
+  genieContext?: string;
 }
 
 export interface InferenceResponse {
   response: string;
   error?: string;
+  toolCalls?: Array<{ toolName: string; toolId: string; input: Record<string, unknown> }>;
+}
+
+export interface GenieOutput {
+  messages: Array<{ role: "user" | "assistant"; content: string }>;
+  lastUpdated?: number;
 }
 
 // Pipeline execution request

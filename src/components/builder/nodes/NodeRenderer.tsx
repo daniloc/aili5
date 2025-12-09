@@ -7,14 +7,17 @@ import type {
   InferenceConfig,
   IconDisplayConfig,
   ColorDisplayConfig,
+  GenieConfig,
   TextOutput,
   IconOutput,
   ColorOutput,
+  GenieOutput,
 } from "@/types/pipeline";
 import { SystemPromptNodeEditor } from "./SystemPromptNodeEditor";
 import { InferenceNodeEditor } from "./InferenceNodeEditor";
 import { IconDisplayNodeEditor } from "./IconDisplayNodeEditor";
 import { ColorDisplayNodeEditor } from "./ColorDisplayNodeEditor";
+import { GenieNodeEditor } from "./GenieNodeEditor";
 
 interface NodeRendererProps {
   node: PipelineNodeConfig;
@@ -24,6 +27,12 @@ interface NodeRendererProps {
   onRunInference?: (nodeId: string) => void;
   isLoading?: boolean;
   output?: unknown;
+  // Genie-specific props
+  genieConversation?: GenieOutput | null;
+  onGenieSelfInference?: (nodeId: string, message: string) => void;
+  onGenieSaveBackstory?: (nodeId: string) => void;
+  genieHasUpdate?: boolean;
+  onGenieClearUpdate?: (nodeId: string) => void;
 }
 
 export function NodeRenderer({
@@ -34,6 +43,11 @@ export function NodeRenderer({
   onRunInference,
   isLoading = false,
   output = null,
+  genieConversation,
+  onGenieSelfInference,
+  onGenieSaveBackstory,
+  genieHasUpdate,
+  onGenieClearUpdate,
 }: NodeRendererProps) {
   switch (node.type) {
     case "system_prompt":
@@ -74,6 +88,20 @@ export function NodeRenderer({
           onChange={(config) => onConfigChange(node.id, config)}
           output={output as ColorOutput | null}
           loading={isLoading}
+        />
+      );
+
+    case "genie":
+      return (
+        <GenieNodeEditor
+          config={node.config as GenieConfig}
+          onChange={(config) => onConfigChange(node.id, config)}
+          conversation={genieConversation || null}
+          onSelfInference={(message) => onGenieSelfInference?.(node.id, message)}
+          onSaveBackstory={() => onGenieSaveBackstory?.(node.id)}
+          loading={isLoading}
+          hasUpdate={genieHasUpdate || false}
+          onClearUpdate={() => onGenieClearUpdate?.(node.id)}
         />
       );
 

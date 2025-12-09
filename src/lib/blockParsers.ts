@@ -1,6 +1,7 @@
 import type { NodeInterface, InferenceResponse } from "@/lib/nodeInterface";
 import { IconDisplayNodeInterface } from "@/components/builder/nodes/IconDisplayNodeEditor";
 import { ColorDisplayNodeInterface } from "@/components/builder/nodes/ColorDisplayNodeEditor";
+import { GenieNodeInterface } from "@/components/builder/nodes/GenieNodeEditor";
 
 /**
  * Registry of node interfaces by block type
@@ -10,6 +11,7 @@ import { ColorDisplayNodeInterface } from "@/components/builder/nodes/ColorDispl
 const nodeInterfaces: Record<string, NodeInterface<any, any>> = {
   icon_display: IconDisplayNodeInterface,
   color_display: ColorDisplayNodeInterface,
+  genie: GenieNodeInterface,
   // Add more node interfaces here as needed:
   // gauge_display: GaugeDisplayNodeInterface,
 };

@@ -13,6 +13,7 @@ import type {
   PipelineNodeConfig,
   NodeConfigByType,
   ColorOutput,
+  GenieOutput,
 } from "@/types/pipeline";
 import { MODULE_DEFINITIONS } from "./ModulePalette";
 import { NodeRenderer } from "./nodes/NodeRenderer";
@@ -28,6 +29,12 @@ interface PipelineCanvasProps {
   loadingNodeId: string | null;
   outputs: Record<string, unknown>;
   activeNodeId: string | null;
+  // Genie-specific props
+  genieConversations?: Record<string, GenieOutput>;
+  onGenieSelfInference?: (nodeId: string, message: string) => void;
+  onGenieSaveBackstory?: (nodeId: string) => void;
+  genieBackstoryUpdates?: Record<string, boolean>;
+  onGenieClearUpdate?: (nodeId: string) => void;
 }
 
 interface SortableNodeProps {
@@ -40,6 +47,12 @@ interface SortableNodeProps {
   isLoading: boolean;
   output: unknown;
   isLast: boolean;
+  // Genie-specific props
+  genieConversation?: GenieOutput | null;
+  onGenieSelfInference?: (nodeId: string, message: string) => void;
+  onGenieSaveBackstory?: (nodeId: string) => void;
+  genieHasUpdate?: boolean;
+  onGenieClearUpdate?: (nodeId: string) => void;
 }
 
 function SortableNode({
@@ -52,6 +65,11 @@ function SortableNode({
   isLoading,
   output,
   isLast,
+  genieConversation,
+  onGenieSelfInference,
+  onGenieSaveBackstory,
+  genieHasUpdate,
+  onGenieClearUpdate,
 }: SortableNodeProps) {
   const {
     attributes,
@@ -95,6 +113,7 @@ function SortableNode({
               className={styles.dragHandle}
               {...attributes}
               {...listeners}
+              suppressHydrationWarning
             >
               <GripVertical size={16} />
             </div>
@@ -104,6 +123,9 @@ function SortableNode({
               </div>
             )}
             <span className={styles.nodeName}>{moduleInfo?.name || node.type}</span>
+            {genieHasUpdate && (
+              <span className={styles.notificationDot} title="Backstory updated" />
+            )}
           </div>
           <button
             className={styles.removeButton}
@@ -125,6 +147,11 @@ function SortableNode({
             onRunInference={onRunInference}
             isLoading={isLoading}
             output={output}
+            genieConversation={genieConversation}
+            onGenieSelfInference={onGenieSelfInference}
+            onGenieSaveBackstory={onGenieSaveBackstory}
+            genieHasUpdate={genieHasUpdate}
+            onGenieClearUpdate={onGenieClearUpdate}
           />
         </div>
       </div>
@@ -157,6 +184,11 @@ export function PipelineCanvas({
   loadingNodeId,
   outputs,
   activeNodeId,
+  genieConversations,
+  onGenieSelfInference,
+  onGenieSaveBackstory,
+  genieBackstoryUpdates,
+  onGenieClearUpdate,
 }: PipelineCanvasProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: "pipeline-canvas",
@@ -198,6 +230,11 @@ export function PipelineCanvas({
                 isLoading={loadingNodeId === node.id}
                 output={outputs[node.id] || null}
                 isLast={index === nodes.length - 1}
+                genieConversation={genieConversations?.[node.id]}
+                onGenieSelfInference={onGenieSelfInference}
+                onGenieSaveBackstory={onGenieSaveBackstory}
+                genieHasUpdate={genieBackstoryUpdates?.[node.id] || false}
+                onGenieClearUpdate={onGenieClearUpdate}
               />
             ))}
           </SortableContext>
