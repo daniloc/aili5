@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import type { Tool } from "@anthropic-ai/sdk/resources/messages";
 import {
-  X,
+  XCircle,
   FileText,
   MessageSquare,
   Globe,
@@ -13,6 +12,7 @@ import {
   ChevronDown,
   ChevronRight,
   Paintbrush,
+  Eye,
 } from "lucide-react";
 import type {
   PipelineNodeConfig,
@@ -24,6 +24,7 @@ import type {
   PaintConfig,
 } from "@/types/pipeline";
 import { generateBlockMetadata } from "@/lib/blockParsers";
+import { getToolForNode, getGenieTool } from "@/lib/tools";
 import styles from "./ContextInspector.module.css";
 
 export interface ContextSection {
@@ -33,20 +34,22 @@ export interface ContextSection {
   title: string;
   content: string;
   icon: typeof FileText;
+  isDimmed?: boolean;
 }
 
 interface ContextInspectorProps {
   isOpen: boolean;
   onClose: () => void;
   targetNodeId: string;
+  targetNodeColor?: string;
 
   // Context data
   systemPromptConfig: SystemPromptConfig;
-  precedingNodes: PipelineNodeConfig[];
+  allNodes: PipelineNodeConfig[];
+  targetNodeIndex: number;
   genieConversations: Record<string, GenieOutput>;
   urlContexts: Record<string, URLContextItem>;
   userInputs: Record<string, string>;
-  tools: Tool[];
 
   // For highlighting source nodes
   onHoverSection: (nodeId: string | null) => void;
@@ -57,15 +60,15 @@ interface ContextInspectorProps {
  */
 function gatherContextSections(
   systemPromptConfig: SystemPromptConfig,
-  precedingNodes: PipelineNodeConfig[],
+  allNodes: PipelineNodeConfig[],
+  targetNodeIndex: number,
   genieConversations: Record<string, GenieOutput>,
   urlContexts: Record<string, URLContextItem>,
-  userInputs: Record<string, string>,
-  tools: Tool[]
+  userInputs: Record<string, string>
 ): ContextSection[] {
   const sections: ContextSection[] = [];
 
-  // 1. System Prompt
+  // 1. System Prompt (always visible, never dimmed since it's first)
   if (systemPromptConfig.prompt) {
     sections.push({
       id: "system-prompt",
@@ -74,13 +77,19 @@ function gatherContextSections(
       title: "System Prompt",
       content: systemPromptConfig.prompt,
       icon: FileText,
+      isDimmed: false,
     });
   }
 
-  // 2. Process preceding nodes
-  for (const node of precedingNodes) {
-    // Skip system prompt (already handled)
+  // 2. Process all nodes
+  for (let i = 0; i < allNodes.length; i++) {
+    const node = allNodes[i];
+    // Skip system prompt (already handled) and the target node itself
     if (node.type === "system_prompt") continue;
+    if (i === targetNodeIndex) continue;
+
+    // Mark as dimmed if this node comes AFTER the target node
+    const isDimmed = i > targetNodeIndex;
 
     // Genie conversations
     if (node.type === "genie") {
@@ -102,6 +111,7 @@ function gatherContextSections(
           title: `Genie: ${genieConfig.name}`,
           content,
           icon: MessageSquare,
+          isDimmed,
         });
       }
     }
@@ -117,6 +127,7 @@ function gatherContextSections(
           title: ctx.label || ctx.url,
           content: `Source: ${ctx.url}\n\n${ctx.content}`,
           icon: Globe,
+          isDimmed,
         });
       }
     }
@@ -133,6 +144,7 @@ function gatherContextSections(
           title: config.label || "Text Input",
           content: content.trim(),
           icon: Type,
+          isDimmed,
         });
       }
     }
@@ -149,20 +161,36 @@ function gatherContextSections(
           title: config.label || "Drawing",
           content: "[an image to be uploaded to the LLM for interpretation]",
           icon: Paintbrush,
+          isDimmed,
         });
       }
     }
 
     // Block metadata (for output nodes like icon_display, color_display)
+    // Include tool definition if this node provides one
     const metadata = generateBlockMetadata(node.type, node.config, node.id);
-    if (metadata) {
+    const nodeTool = getToolForNode(node);
+    const genieTool = getGenieTool(node);
+    const tool = nodeTool || genieTool;
+
+    if (metadata || tool) {
+      let content = "";
+      if (metadata) {
+        content += metadata.trim();
+      }
+      if (tool) {
+        if (content) content += "\n\n";
+        content += `Tool: ${tool.name}\n${tool.description}`;
+      }
+
       sections.push({
         id: `block-${node.id}`,
         type: "block_metadata",
         sourceNodeId: node.id,
-        title: `Block: ${node.type.replace("_", " ")}`,
-        content: metadata,
-        icon: Blocks,
+        title: node.type.replace(/_/g, " "),
+        content,
+        icon: tool ? Wrench : Blocks,
+        isDimmed,
       });
     }
 
@@ -178,26 +206,12 @@ function gatherContextSections(
         id: `output-${node.id}`,
         type: "block_metadata", // Reuse type for now
         sourceNodeId: node.id,
-        title: `Output: ${node.type.replace("_", " ")}`,
+        title: `Output: ${node.type.replace(/_/g, " ")}`,
         content: outputContent,
         icon: Blocks,
+        isDimmed,
       });
     }
-  }
-
-  // 3. Tool definitions
-  if (tools.length > 0) {
-    const toolContent = tools
-      .map((tool) => `${tool.name}: ${tool.description}`)
-      .join("\n\n");
-    sections.push({
-      id: "tools",
-      type: "tools",
-      sourceNodeId: "tools", // Special ID for tools section
-      title: `Tools (${tools.length})`,
-      content: toolContent,
-      icon: Wrench,
-    });
   }
 
   return sections;
@@ -207,12 +221,13 @@ export function ContextInspector({
   isOpen,
   onClose,
   targetNodeId,
+  targetNodeColor,
   systemPromptConfig,
-  precedingNodes,
+  allNodes,
+  targetNodeIndex,
   genieConversations,
   urlContexts,
   userInputs,
-  tools,
   onHoverSection,
 }: ContextInspectorProps) {
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
@@ -221,11 +236,11 @@ export function ContextInspector({
   // Gather context sections
   const sections = gatherContextSections(
     systemPromptConfig,
-    precedingNodes,
+    allNodes || [],
+    targetNodeIndex,
     genieConversations,
     urlContexts,
-    userInputs,
-    tools
+    userInputs
   );
 
   // Toggle section collapse
@@ -261,19 +276,25 @@ export function ContextInspector({
       )}
     >
       <div className={styles.header}>
+        <button
+          className={styles.closeButton}
+          onClick={onClose}
+          aria-label="Close inspector"
+        >
+          <XCircle size={18} />
+        </button>
         <div className={styles.headerText}>
           <h3 className={styles.title}>Context Inspector</h3>
           <p className={styles.description}>
             This is all the information available to the selected inference node.
           </p>
         </div>
-        <button
-          className={styles.closeButton}
-          onClick={onClose}
-          aria-label="Close inspector"
+        <div
+          className={styles.headerIcon}
+          style={targetNodeColor ? { background: targetNodeColor, color: 'white' } : undefined}
         >
-          <X size={18} />
-        </button>
+          <Eye size={20} />
+        </div>
       </div>
 
       <div className={styles.content}>
@@ -289,7 +310,7 @@ export function ContextInspector({
             return (
               <div
                 key={section.id}
-                className={styles.section}
+                className={`${styles.section} ${section.isDimmed ? styles.dimmed : ""}`}
                 data-section-id={section.id}
                 data-node-id={section.sourceNodeId}
                 onMouseEnter={() => onHoverSection(section.sourceNodeId)}

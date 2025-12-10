@@ -42,6 +42,7 @@ interface PipelineCanvasProps {
   onGenieClearUpdate?: (nodeId: string) => void;
   // Context inspector props
   highlightedNodeId?: string | null;
+  inspectedNodeId?: string | null;
   onInspectContext?: (nodeId: string) => void;
   // Tutorial props
   onOpenTutorial?: (nodeType: string) => void;
@@ -74,6 +75,7 @@ interface SortableNodeProps {
   onGenieClearUpdate?: (nodeId: string) => void;
   // Context inspector props
   isHighlighted?: boolean;
+  isInspected?: boolean;
   onInspectContext?: (nodeId: string) => void;
   // Tutorial props
   onOpenTutorial?: (nodeType: string) => void;
@@ -103,6 +105,7 @@ function SortableNode({
   genieHasUpdate,
   onGenieClearUpdate,
   isHighlighted,
+  isInspected,
   onInspectContext,
   onOpenTutorial,
   streamingText,
@@ -152,7 +155,7 @@ function SortableNode({
           ...style,
           "--module-color": nodeColor,
         } as React.CSSProperties}
-        className={`${styles.node} ${isDragging ? styles.dragging : ""} ${isHighlighted ? styles.highlighted : ""}`}
+        className={`${styles.node} ${isDragging ? styles.dragging : ""} ${isHighlighted ? styles.highlighted : ""} ${isInspected ? styles.inspected : ""}`}
         data-node-id={node.id}
       >
         <div className={styles.nodeHeader}>
@@ -262,6 +265,7 @@ export function PipelineCanvas({
   genieBackstoryUpdates,
   onGenieClearUpdate,
   highlightedNodeId,
+  inspectedNodeId,
   onInspectContext,
   onOpenTutorial,
 }: PipelineCanvasProps) {
@@ -329,6 +333,7 @@ export function PipelineCanvas({
                 genieHasUpdate={genieBackstoryUpdates?.[node.id] || false}
                 onGenieClearUpdate={onGenieClearUpdate}
                 isHighlighted={highlightedNodeId === node.id}
+                isInspected={inspectedNodeId === node.id}
                 onInspectContext={onInspectContext}
                 onOpenTutorial={onOpenTutorial}
               />

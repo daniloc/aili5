@@ -17,6 +17,7 @@ import type { GenieUpdate } from "@/components/builder/nodes/GenieNodeEditor";
 import { ModulePalette, MODULE_DEFINITIONS, SYSTEM_PROMPT_MODULE } from "./ModulePalette";
 import { PipelineCanvas } from "./PipelineCanvas";
 import { ContextInspector } from "./ContextInspector";
+import { InspectorConnector } from "./InspectorConnector";
 import { TutorialModal } from "./TutorialModal";
 import type { NodeType } from "@/types/pipeline";
 import styles from "./PipelineBuilder.module.css";
@@ -358,21 +359,21 @@ ${"#".repeat(60)}`;
       : MODULE_DEFINITIONS.find((m) => m.type === dragDrop.activeType)
     : null;
 
-  // Get preceding nodes and tools for inspector
+  // Get all nodes and target index for inspector
   const getInspectorData = useCallback(
     (targetNodeId: string) => {
       const nodeIndex = allNodes.findIndex((n) => n.id === targetNodeId);
-      if (nodeIndex === -1) return { precedingNodes: [], tools: [] };
-      const precedingNodes = allNodes.slice(0, nodeIndex);
-      const { tools } = getToolsForDownstreamNodes(allNodes, nodeIndex);
-      return { precedingNodes, tools };
+      if (nodeIndex === -1) return { allNodes: [], targetNodeIndex: -1, targetNodeColor: undefined };
+      const targetNode = allNodes[nodeIndex];
+      const moduleInfo = MODULE_DEFINITIONS.find((m) => m.type === targetNode.type);
+      return { allNodes, targetNodeIndex: nodeIndex, targetNodeColor: moduleInfo?.color };
     },
     [allNodes]
   );
 
   const inspectorData = inspectorState.targetNodeId
     ? getInspectorData(inspectorState.targetNodeId)
-    : { precedingNodes: [], tools: [] };
+    : { allNodes: [], targetNodeIndex: -1, targetNodeColor: undefined };
 
   return (
     <DndContext
@@ -387,12 +388,13 @@ ${"#".repeat(60)}`;
           isOpen={inspectorState.isOpen}
           onClose={closeInspector}
           targetNodeId={inspectorState.targetNodeId || ""}
+          targetNodeColor={inspectorData.targetNodeColor}
           systemPromptConfig={store.systemPromptConfig}
-          precedingNodes={inspectorData.precedingNodes}
+          allNodes={inspectorData.allNodes}
+          targetNodeIndex={inspectorData.targetNodeIndex}
           genieConversations={genieConversations}
           urlContexts={urlLoader.urlContexts}
           userInputs={store.userInputs}
-          tools={inspectorData.tools}
           onHoverSection={setHighlightedNodeId}
         />
         <PipelineCanvas
@@ -417,10 +419,16 @@ ${"#".repeat(60)}`;
             store.clearNodeState(nodeId, "genie:backstoryUpdate");
           }}
           highlightedNodeId={highlightedNodeId}
+          inspectedNodeId={inspectorState.isOpen ? inspectorState.targetNodeId : null}
           onInspectContext={toggleInspector}
           onOpenTutorial={handleOpenTutorial}
         />
         <ModulePalette onOpenTutorial={handleOpenTutorial} />
+        <InspectorConnector
+          isOpen={inspectorState.isOpen}
+          targetNodeId={inspectorState.targetNodeId}
+          color={inspectorData.targetNodeColor}
+        />
       </div>
 
       <TutorialModal
