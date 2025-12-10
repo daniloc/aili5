@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import Anthropic from "@anthropic-ai/sdk";
+
+// Use Node.js runtime for LLM calls
+export const runtime = "nodejs";
+export const maxDuration = 60;
 import type { Tool } from "@anthropic-ai/sdk/resources/messages";
 import { AUTH_COOKIE_NAME, OAUTH_CONFIG } from "@/lib/auth/constants";
 import type { StoredAuthData } from "@/lib/auth/oauth";

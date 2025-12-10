@@ -1,6 +1,10 @@
 import { NextRequest } from "next/server";
 import { cookies } from "next/headers";
 import Anthropic from "@anthropic-ai/sdk";
+
+// Use Node.js runtime for streaming support
+export const runtime = "nodejs";
+export const maxDuration = 60;
 import { AUTH_COOKIE_NAME, OAUTH_CONFIG } from "@/lib/auth/constants";
 import type { StoredAuthData } from "@/lib/auth/oauth";
 
