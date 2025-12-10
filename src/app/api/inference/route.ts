@@ -68,11 +68,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<Inference
     // Add tools if provided
     if (tools && tools.length > 0) {
       requestOptions.tools = tools;
-      // Use tool_choice if provided, default to "any" to encourage tool use
+      // Use tool_choice if provided, default to "auto" so model decides when to use tools
       if (toolChoice) {
         requestOptions.tool_choice = toolChoice as Anthropic.ToolChoice;
       } else {
-        requestOptions.tool_choice = { type: "any" } as Anthropic.ToolChoice;
+        requestOptions.tool_choice = { type: "auto" } as Anthropic.ToolChoice;
       }
     }
 

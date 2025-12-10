@@ -15,6 +15,7 @@ import {
   FileText,
   Sparkles,
   Smile,
+  HelpCircle,
   type LucideIcon,
 } from "lucide-react";
 import type { NodeType } from "@/types/pipeline";
@@ -147,9 +148,10 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
 
 interface DraggableModuleProps {
   module: ModuleDefinition;
+  onOpenTutorial?: (nodeType: string) => void;
 }
 
-function DraggableModule({ module }: DraggableModuleProps) {
+function DraggableModule({ module, onOpenTutorial }: DraggableModuleProps) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `palette-${module.type}`,
     data: {
@@ -175,14 +177,32 @@ function DraggableModule({ module }: DraggableModuleProps) {
         <Icon size={18} />
       </div>
       <div className={styles.moduleInfo}>
-        <span className={styles.moduleName}>{module.name}</span>
+        <div className={styles.moduleInfoTop}>
+          <span className={styles.moduleName}>{module.name}</span>
+          {onOpenTutorial && (
+            <button
+              className={styles.helpButton}
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenTutorial(module.type);
+              }}
+              title="Learn about this module"
+            >
+              <HelpCircle size={18} />
+            </button>
+          )}
+        </div>
         <span className={styles.moduleDescription}>{module.description}</span>
       </div>
     </div>
   );
 }
 
-export function ModulePalette() {
+interface ModulePaletteProps {
+  onOpenTutorial?: (nodeType: string) => void;
+}
+
+export function ModulePalette({ onOpenTutorial }: ModulePaletteProps) {
   const inputModules = MODULE_DEFINITIONS.filter((m) => m.category === "input");
   const inferenceModules = MODULE_DEFINITIONS.filter((m) => m.category === "inference");
   const outputModules = MODULE_DEFINITIONS.filter((m) => m.category === "output");
@@ -195,21 +215,21 @@ export function ModulePalette() {
       <div className={styles.section}>
         <h3 className={styles.sectionTitle}>Input</h3>
         {inputModules.map((module) => (
-          <DraggableModule key={module.type} module={module} />
+          <DraggableModule key={module.type} module={module} onOpenTutorial={onOpenTutorial} />
         ))}
       </div>
 
       <div className={styles.section}>
         <h3 className={styles.sectionTitle}>Inference</h3>
         {inferenceModules.map((module) => (
-          <DraggableModule key={module.type} module={module} />
+          <DraggableModule key={module.type} module={module} onOpenTutorial={onOpenTutorial} />
         ))}
       </div>
 
       <div className={styles.section}>
         <h3 className={styles.sectionTitle}>Output</h3>
         {outputModules.map((module) => (
-          <DraggableModule key={module.type} module={module} />
+          <DraggableModule key={module.type} module={module} onOpenTutorial={onOpenTutorial} />
         ))}
       </div>
     </div>

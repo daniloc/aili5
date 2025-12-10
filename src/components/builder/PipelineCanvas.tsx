@@ -8,7 +8,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, X } from "lucide-react";
+import { GripVertical, X, HelpCircle } from "lucide-react";
 import { PipeIcon } from "./PipeIcon";
 import type {
   PipelineNodeConfig,
@@ -43,6 +43,12 @@ interface PipelineCanvasProps {
   // Context inspector props
   highlightedNodeId?: string | null;
   onInspectContext?: (nodeId: string) => void;
+  // Tutorial props
+  onOpenTutorial?: (nodeType: string) => void;
+  // Streaming props
+  streamingNodeId?: string | null;
+  streamingText?: string;
+  isStreaming?: boolean;
 }
 
 interface SortableNodeProps {
@@ -69,6 +75,11 @@ interface SortableNodeProps {
   // Context inspector props
   isHighlighted?: boolean;
   onInspectContext?: (nodeId: string) => void;
+  // Tutorial props
+  onOpenTutorial?: (nodeType: string) => void;
+  // Streaming props
+  streamingText?: string;
+  isStreaming?: boolean;
 }
 
 function SortableNode({
@@ -93,6 +104,9 @@ function SortableNode({
   onGenieClearUpdate,
   isHighlighted,
   onInspectContext,
+  onOpenTutorial,
+  streamingText,
+  isStreaming,
 }: SortableNodeProps) {
   const {
     attributes,
@@ -163,18 +177,32 @@ function SortableNode({
               <span className={styles.notificationDot} title="Backstory updated" />
             )}
           </div>
-          {!isFixedSystemPrompt && (
-            <button
-              className={styles.removeButton}
-              onClick={(e) => {
-                e.stopPropagation();
-                onRemove();
-              }}
-              title="Remove node"
-            >
-              <X size={14} />
-            </button>
-          )}
+          <div className={styles.nodeHeaderRight}>
+            {onOpenTutorial && (
+              <button
+                className={styles.helpButton}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenTutorial(node.type);
+                }}
+                title="Learn about this node"
+              >
+                <HelpCircle size={18} />
+              </button>
+            )}
+            {!isFixedSystemPrompt && (
+              <button
+                className={styles.removeButton}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRemove();
+                }}
+                title="Remove node"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
         </div>
         <div className={styles.nodeBody}>
           <NodeRenderer
@@ -235,6 +263,7 @@ export function PipelineCanvas({
   onGenieClearUpdate,
   highlightedNodeId,
   onInspectContext,
+  onOpenTutorial,
 }: PipelineCanvasProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: "pipeline-canvas",
@@ -301,6 +330,7 @@ export function PipelineCanvas({
                 onGenieClearUpdate={onGenieClearUpdate}
                 isHighlighted={highlightedNodeId === node.id}
                 onInspectContext={onInspectContext}
+                onOpenTutorial={onOpenTutorial}
               />
             ))}
           </SortableContext>

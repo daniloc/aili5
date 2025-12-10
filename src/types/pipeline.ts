@@ -288,7 +288,7 @@ export interface OutputDataByType {
 
 export const AVAILABLE_MODELS = [
   { id: "claude-sonnet-4-20250514", name: "Claude Sonnet 4" },
-  { id: "claude-haiku-3-20240307", name: "Claude Haiku 3" },
+  { id: "claude-3-haiku-20240307", name: "Claude Haiku 3" },
 ] as const;
 
 export type ModelId = (typeof AVAILABLE_MODELS)[number]["id"];

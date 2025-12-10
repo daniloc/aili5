@@ -15,6 +15,8 @@ interface InferenceNodeEditorProps {
   loading: boolean;
   output: TextOutput | null;
   onInspectContext?: () => void;
+  streamingText?: string;
+  isStreaming?: boolean;
 }
 
 export function InferenceNodeEditor({
@@ -26,8 +28,11 @@ export function InferenceNodeEditor({
   loading,
   output,
   onInspectContext,
+  streamingText = "",
+  isStreaming = false,
 }: InferenceNodeEditorProps) {
   const canRun = userInput.trim().length > 0;
+  const showStreaming = isStreaming && streamingText;
 
   return (
     <div className={styles.nodeEditor}>
@@ -37,7 +42,7 @@ export function InferenceNodeEditor({
         onChange={(e) => onUserInputChange(e.target.value)}
         placeholder="Enter your message..."
         rows={3}
-        disabled={loading}
+        disabled={loading || isStreaming}
       />
 
       <div className={styles.field}>
@@ -49,7 +54,7 @@ export function InferenceNodeEditor({
           className={styles.select}
           value={config.model}
           onChange={(e) => onChange({ ...config, model: e.target.value })}
-          disabled={loading}
+          disabled={loading || isStreaming}
         >
           {AVAILABLE_MODELS.map((m) => (
             <option key={m.id} value={m.id}>
@@ -74,7 +79,7 @@ export function InferenceNodeEditor({
           onChange={(e) =>
             onChange({ ...config, temperature: parseFloat(e.target.value) })
           }
-          disabled={loading}
+          disabled={loading || isStreaming}
         />
         <div className={styles.sliderLabels}>
           <span>Focused</span>
@@ -95,12 +100,17 @@ export function InferenceNodeEditor({
         <button
           className={styles.runButton}
           onClick={onRun}
-          disabled={loading || !canRun}
+          disabled={loading || isStreaming || !canRun}
         >
           {loading ? (
             <>
               <span className={styles.spinner} />
               Running...
+            </>
+          ) : isStreaming ? (
+            <>
+              <span className={styles.spinner} />
+              Streaming...
             </>
           ) : (
             "Run"
@@ -109,7 +119,12 @@ export function InferenceNodeEditor({
       </div>
 
       <div className={styles.outputContainer}>
-        {loading ? (
+        {showStreaming ? (
+          <div className={styles.response}>
+            <ReactMarkdown>{streamingText}</ReactMarkdown>
+            <span className={styles.streamingCursor}>▊</span>
+          </div>
+        ) : loading ? (
           <div className={styles.loadingOutput}>
             <span className={styles.spinner} />
             Generating response...

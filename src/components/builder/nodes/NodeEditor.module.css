@@ -841,3 +841,26 @@
   justify-content: center;
   padding: 1rem;
 }
+
+/* Streaming cursor animation */
+.streamingCursor {
+  display: inline-block;
+  animation: blink 0.7s infinite;
+  color: var(--foreground);
+  margin-left: 2px;
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+/* Streaming message for genie */
+.genieMessageStreaming {
+  align-items: flex-start;
+}
+
+.genieMessageStreaming .genieMessageContent {
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--foreground) 15%, transparent);
+}

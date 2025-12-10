@@ -9,7 +9,7 @@ import { useGenieState } from "@/hooks/useGenieState";
 import { useURLLoader } from "@/hooks/useURLLoader";
 import { buildSystemPrompt } from "@/services/inference/promptBuilder";
 import { routeToolCalls } from "@/services/inference/toolRouter";
-import { runInference } from "@/services/inference/api";
+import { runInference, runStreamingInference } from "@/services/inference/api";
 import { usePipelineStore } from "@/store/pipelineStore";
 import { getGenieConversation, getGenieBackstoryUpdate } from "@/hooks/useGenieState";
 import { parseBlockOutput } from "@/lib/blockParsers";
@@ -17,6 +17,8 @@ import type { GenieUpdate } from "@/components/builder/nodes/GenieNodeEditor";
 import { ModulePalette, MODULE_DEFINITIONS, SYSTEM_PROMPT_MODULE } from "./ModulePalette";
 import { PipelineCanvas } from "./PipelineCanvas";
 import { ContextInspector } from "./ContextInspector";
+import { TutorialModal } from "./TutorialModal";
+import type { NodeType } from "@/types/pipeline";
 import styles from "./PipelineBuilder.module.css";
 
 export function PipelineBuilder() {
@@ -38,6 +40,19 @@ export function PipelineBuilder() {
   }>({ isOpen: false, targetNodeId: null });
   const [highlightedNodeId, setHighlightedNodeId] = useState<string | null>(null);
 
+  // Tutorial modal state
+  const [tutorialState, setTutorialState] = useState<{
+    isOpen: boolean;
+    nodeType: NodeType | null;
+  }>({ isOpen: false, nodeType: null });
+
+  // Streaming state for inference nodes
+  const [streamingState, setStreamingState] = useState<{
+    nodeId: string | null;
+    text: string;
+    isStreaming: boolean;
+  }>({ nodeId: null, text: "", isStreaming: false });
+
   const toggleInspector = useCallback((nodeId: string) => {
     setInspectorState((prev) => {
       // If inspector is open for this node, close it
@@ -53,6 +68,15 @@ export function PipelineBuilder() {
   const closeInspector = useCallback(() => {
     setInspectorState({ isOpen: false, targetNodeId: null });
     setHighlightedNodeId(null);
+  }, []);
+
+  // Tutorial handlers
+  const handleOpenTutorial = useCallback((nodeType: string) => {
+    setTutorialState({ isOpen: true, nodeType: nodeType as NodeType });
+  }, []);
+
+  const handleCloseTutorial = useCallback(() => {
+    setTutorialState({ isOpen: false, nodeType: null });
   }, []);
 
   // Helper to build pipeline context from current state
@@ -172,73 +196,115 @@ ${"#".repeat(60)}`;
 
       store.setLoadingNodeId(inferenceNodeId);
 
-      try {
-        const result = await runInference({
-          systemPrompt,
-          userMessage,
-          model: inferenceConfig.model,
-          temperature: inferenceConfig.temperature,
-          tools: filteredTools.length > 0 ? filteredTools : undefined,
-        });
+      // Check if we have tools - if so, use non-streaming (tool calls don't stream well)
+      const hasTools = filteredTools.length > 0;
 
-        if (result.error) {
-          console.error("Inference error:", result.error);
-          return;
-        }
+      if (hasTools) {
+        // Use non-streaming for tool calls
+        try {
+          const result = await runInference({
+            systemPrompt,
+            userMessage,
+            model: inferenceConfig.model,
+            temperature: inferenceConfig.temperature,
+            tools: filteredTools,
+          });
 
-        // Store text response in the inference node itself
-        if (result.response) {
-          store.setOutput(inferenceNodeId, { content: result.response } as TextOutput);
-        }
+          if (result.error) {
+            console.error("Inference error:", result.error);
+            return;
+          }
 
-        // Process genie updates from tool calls (handles both backstory updates AND messages)
-        // This will call addSystemMessage for genie message tools, which triggers selfInference
-        genie.processBackstoryUpdates(precedingNodes, result, nodeIdByToolName);
+          // Store text response in the inference node itself
+          if (result.response) {
+            store.setOutput(inferenceNodeId, { content: result.response } as TextOutput);
+          }
 
-        // Also check for legacy backstory updates using parseBlockOutput
-        const inferenceResponse = {
-          response: result.response || "",
-          toolCalls: result.toolCalls || [],
-          error: result.error,
-        };
+          // Process genie updates from tool calls (handles both backstory updates AND messages)
+          genie.processBackstoryUpdates(precedingNodes, result, nodeIdByToolName);
 
-        for (const node of precedingNodes) {
-          if (node.type === "genie") {
-            const genieUpdate = parseBlockOutput<GenieUpdate>("genie", inferenceResponse, node.id);
-            if (genieUpdate?.backstory) {
-              // Handle backstory update (legacy support)
-              const genieConfig = node.config as GenieConfig;
-              store.setNodes((prev) =>
-                prev.map((n) =>
-                  n.id === node.id
-                    ? { ...n, config: { ...genieConfig, backstory: genieUpdate.backstory! } }
-                    : n
-                )
-              );
-              genie.processBackstoryUpdates([node], result, nodeIdByToolName);
+          // Also check for legacy backstory updates using parseBlockOutput
+          const inferenceResponse = {
+            response: result.response || "",
+            toolCalls: result.toolCalls || [],
+            error: result.error,
+          };
+
+          for (const node of precedingNodes) {
+            if (node.type === "genie") {
+              const genieUpdate = parseBlockOutput<GenieUpdate>("genie", inferenceResponse, node.id);
+              if (genieUpdate?.backstory) {
+                const genieConfig = node.config as GenieConfig;
+                store.setNodes((prev) =>
+                  prev.map((n) =>
+                    n.id === node.id
+                      ? { ...n, config: { ...genieConfig, backstory: genieUpdate.backstory! } }
+                      : n
+                  )
+                );
+                genie.processBackstoryUpdates([node], result, nodeIdByToolName);
+              }
             }
           }
-        }
 
-        // Route tool call results to their target output nodes (excluding genie updates and genie messages)
-        if (result.toolCalls && result.toolCalls.length > 0) {
-          // Filter out genie update tool calls and genie message tool calls
-          const nonGenieToolCalls = result.toolCalls.filter(
-            (tc) => !tc.toolName.startsWith("update_genie_") && !isGenieMessageTool(tc.toolName)
+          // Route tool call results to their target output nodes
+          if (result.toolCalls && result.toolCalls.length > 0) {
+            const nonGenieToolCalls = result.toolCalls.filter(
+              (tc) => !tc.toolName.startsWith("update_genie_") && !isGenieMessageTool(tc.toolName)
+            );
+
+            if (nonGenieToolCalls.length > 0) {
+              const outputs = routeToolCalls(nonGenieToolCalls, nodeIdByToolName, fullNodes, inferenceResponse);
+              for (const [id, output] of Object.entries(outputs)) {
+                store.setOutput(id, output);
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Failed to run inference:", error);
+        } finally {
+          store.setLoadingNodeId(null);
+        }
+      } else {
+        // Use streaming for simple text responses
+        setStreamingState({ nodeId: inferenceNodeId, text: "", isStreaming: true });
+
+        try {
+          let fullResponse = "";
+          
+          await runStreamingInference(
+            {
+              systemPrompt,
+              userMessage,
+              model: inferenceConfig.model,
+              temperature: inferenceConfig.temperature,
+            },
+            // onChunk - accumulate text
+            (chunk) => {
+              fullResponse += chunk;
+              setStreamingState((prev) => ({
+                ...prev,
+                text: fullResponse,
+              }));
+            },
+            // onDone - save final output
+            () => {
+              store.setOutput(inferenceNodeId, { content: fullResponse } as TextOutput);
+              setStreamingState({ nodeId: null, text: "", isStreaming: false });
+              store.setLoadingNodeId(null);
+            },
+            // onError
+            (error) => {
+              console.error("Streaming error:", error);
+              setStreamingState({ nodeId: null, text: "", isStreaming: false });
+              store.setLoadingNodeId(null);
+            }
           );
-
-          if (nonGenieToolCalls.length > 0) {
-            const outputs = routeToolCalls(nonGenieToolCalls, nodeIdByToolName, fullNodes, inferenceResponse);
-            // Set outputs - they're now nested in nodes, so order is preserved
-            for (const [id, output] of Object.entries(outputs)) {
-              store.setOutput(id, output);
-            }
-          }
+        } catch (error) {
+          console.error("Failed to run streaming inference:", error);
+          setStreamingState({ nodeId: null, text: "", isStreaming: false });
+          store.setLoadingNodeId(null);
         }
-      } catch (error) {
-        console.error("Failed to run inference:", error);
-      } finally {
-        store.setLoadingNodeId(null);
       }
     },
     [store, urlLoader.urlContexts, genie]
@@ -333,9 +399,16 @@ ${"#".repeat(60)}`;
           }}
           highlightedNodeId={highlightedNodeId}
           onInspectContext={toggleInspector}
+          onOpenTutorial={handleOpenTutorial}
         />
-        <ModulePalette />
+        <ModulePalette onOpenTutorial={handleOpenTutorial} />
       </div>
+
+      <TutorialModal
+        isOpen={tutorialState.isOpen}
+        onClose={handleCloseTutorial}
+        nodeType={tutorialState.nodeType}
+      />
 
       <DragOverlay>
         {activeModule && (
