@@ -37,7 +37,7 @@ export default function Home() {
         <div className={styles.headerContent}>
           <div>
             <h1 className={styles.title}>aili5</h1>
-            <p className={styles.subtitle}>Learn how LLMs work by building a pipeline</p>
+            <p className={styles.subtitle}>Your LLM toybox awaits</p>
           </div>
           <div className={styles.buttonGroup}>
             <button className={styles.actionButton} onClick={handleCopy} title="Copy pipeline">
