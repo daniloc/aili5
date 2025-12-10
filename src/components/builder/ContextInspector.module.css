@@ -100,14 +100,15 @@
 }
 
 .section {
-  border: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);
+  --section-color: #6B7280; /* Default grey, overridden by inline style */
+  border: 1px solid var(--section-color);
   border-radius: 8px;
   overflow: hidden;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .section:hover {
-  border-color: color-mix(in srgb, var(--foreground) 25%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--section-color) 30%, transparent);
 }
 
 .section.dimmed {

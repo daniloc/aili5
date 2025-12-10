@@ -25,16 +25,28 @@ import type {
 } from "@/types/pipeline";
 import { generateBlockMetadata } from "@/lib/blockParsers";
 import { getToolForNode, getGenieTool } from "@/lib/tools";
+import { MODULE_DEFINITIONS, SYSTEM_PROMPT_MODULE } from "./ModulePalette";
 import styles from "./ContextInspector.module.css";
+
+// Helper to get module color by node type
+function getModuleColor(nodeType: string): string {
+  if (nodeType === "system_prompt") {
+    return SYSTEM_PROMPT_MODULE.color;
+  }
+  const module = MODULE_DEFINITIONS.find((m) => m.type === nodeType);
+  return module?.color || "#6B7280"; // Default grey
+}
 
 export interface ContextSection {
   id: string;
   type: "system_prompt" | "genie" | "url" | "text_input" | "paint" | "block_metadata" | "tools";
   sourceNodeId: string;
+  sourceNodeType: string;
   title: string;
   content: string;
   icon: typeof FileText;
   isDimmed?: boolean;
+  color: string;
 }
 
 interface ContextInspectorProps {
@@ -74,10 +86,12 @@ function gatherContextSections(
       id: "system-prompt",
       type: "system_prompt",
       sourceNodeId: "system-prompt-fixed",
+      sourceNodeType: "system_prompt",
       title: "System Prompt",
       content: systemPromptConfig.prompt,
       icon: FileText,
       isDimmed: false,
+      color: getModuleColor("system_prompt"),
     });
   }
 
@@ -108,10 +122,12 @@ function gatherContextSections(
           id: `genie-${node.id}`,
           type: "genie",
           sourceNodeId: node.id,
+          sourceNodeType: node.type,
           title: `Genie: ${genieConfig.name}`,
           content,
           icon: MessageSquare,
           isDimmed,
+          color: getModuleColor(node.type),
         });
       }
     }
@@ -124,10 +140,12 @@ function gatherContextSections(
           id: `url-${node.id}`,
           type: "url",
           sourceNodeId: node.id,
+          sourceNodeType: node.type,
           title: ctx.label || ctx.url,
           content: `Source: ${ctx.url}\n\n${ctx.content}`,
           icon: Globe,
           isDimmed,
+          color: getModuleColor(node.type),
         });
       }
     }
@@ -141,10 +159,12 @@ function gatherContextSections(
           id: `text-${node.id}`,
           type: "text_input",
           sourceNodeId: node.id,
+          sourceNodeType: node.type,
           title: config.label || "Text Input",
           content: content.trim(),
           icon: Type,
           isDimmed,
+          color: getModuleColor(node.type),
         });
       }
     }
@@ -158,10 +178,12 @@ function gatherContextSections(
           id: `paint-${node.id}`,
           type: "paint",
           sourceNodeId: node.id,
+          sourceNodeType: node.type,
           title: config.label || "Drawing",
           content: "[an image to be uploaded to the LLM for interpretation]",
           icon: Paintbrush,
           isDimmed,
+          color: getModuleColor(node.type),
         });
       }
     }
@@ -187,10 +209,12 @@ function gatherContextSections(
         id: `block-${node.id}`,
         type: "block_metadata",
         sourceNodeId: node.id,
+        sourceNodeType: node.type,
         title: node.type.replace(/_/g, " "),
         content,
         icon: tool ? Wrench : Blocks,
         isDimmed,
+        color: getModuleColor(node.type),
       });
     }
 
@@ -206,10 +230,12 @@ function gatherContextSections(
         id: `output-${node.id}`,
         type: "block_metadata", // Reuse type for now
         sourceNodeId: node.id,
+        sourceNodeType: node.type,
         title: `Output: ${node.type.replace(/_/g, " ")}`,
         content: outputContent,
         icon: Blocks,
         isDimmed,
+        color: getModuleColor(node.type),
       });
     }
   }
@@ -319,6 +345,7 @@ export function ContextInspector({
                   )}
                   <div
                     className={`${styles.section} ${section.isDimmed ? styles.dimmed : ""}`}
+                    style={{ "--section-color": section.color } as React.CSSProperties}
                     data-section-id={section.id}
                     data-node-id={section.sourceNodeId}
                     onMouseEnter={() => onHoverSection(section.sourceNodeId)}
