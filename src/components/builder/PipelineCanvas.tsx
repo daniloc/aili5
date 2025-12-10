@@ -41,6 +41,9 @@ interface PipelineCanvasProps {
   onGenieSaveBackstory?: (nodeId: string) => void;
   genieBackstoryUpdates?: Record<string, boolean>;
   onGenieClearUpdate?: (nodeId: string) => void;
+  // Context inspector props
+  highlightedNodeId?: string | null;
+  onInspectContext?: (nodeId: string) => void;
 }
 
 interface SortableNodeProps {
@@ -64,6 +67,9 @@ interface SortableNodeProps {
   onGenieSaveBackstory?: (nodeId: string) => void;
   genieHasUpdate?: boolean;
   onGenieClearUpdate?: (nodeId: string) => void;
+  // Context inspector props
+  isHighlighted?: boolean;
+  onInspectContext?: (nodeId: string) => void;
 }
 
 function SortableNode({
@@ -86,6 +92,8 @@ function SortableNode({
   onGenieSaveBackstory,
   genieHasUpdate,
   onGenieClearUpdate,
+  isHighlighted,
+  onInspectContext,
 }: SortableNodeProps) {
   const {
     attributes,
@@ -131,7 +139,8 @@ function SortableNode({
           ...style,
           "--module-color": nodeColor,
         } as React.CSSProperties}
-        className={`${styles.node} ${isDragging ? styles.dragging : ""}`}
+        className={`${styles.node} ${isDragging ? styles.dragging : ""} ${isHighlighted ? styles.highlighted : ""}`}
+        data-node-id={node.id}
       >
         <div className={styles.nodeHeader}>
           <div className={styles.nodeHeaderLeft}>
@@ -184,6 +193,7 @@ function SortableNode({
             onGenieSaveBackstory={onGenieSaveBackstory}
             genieHasUpdate={genieHasUpdate}
             onGenieClearUpdate={onGenieClearUpdate}
+            onInspectContext={onInspectContext}
           />
         </div>
       </div>
@@ -225,6 +235,8 @@ export function PipelineCanvas({
   onGenieSaveBackstory,
   genieBackstoryUpdates,
   onGenieClearUpdate,
+  highlightedNodeId,
+  onInspectContext,
 }: PipelineCanvasProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: "pipeline-canvas",
@@ -289,6 +301,8 @@ export function PipelineCanvas({
                 onGenieSaveBackstory={onGenieSaveBackstory}
                 genieHasUpdate={genieBackstoryUpdates?.[node.id] || false}
                 onGenieClearUpdate={onGenieClearUpdate}
+                isHighlighted={highlightedNodeId === node.id}
+                onInspectContext={onInspectContext}
               />
             ))}
           </SortableContext>
