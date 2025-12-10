@@ -1,3 +1,9 @@
+export interface ImageData {
+  type: "base64";
+  mediaType: "image/png" | "image/jpeg" | "image/gif" | "image/webp";
+  data: string; // base64 encoded image data without the data URL prefix
+}
+
 export interface InferenceParams {
   systemPrompt: string;
   userMessage: string;
@@ -5,6 +11,7 @@ export interface InferenceParams {
   temperature: number;
   tools?: unknown[];
   toolChoice?: "auto" | "any" | { type: "tool"; name: string };
+  images?: ImageData[];
 }
 
 export interface InferenceResult {
@@ -27,6 +34,7 @@ export async function runInference(params: InferenceParams): Promise<InferenceRe
       temperature: params.temperature,
       tools: params.tools,
       toolChoice: params.toolChoice,
+      images: params.images,
     }),
   });
 

@@ -32,9 +32,14 @@
 
 .title {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: 1.25rem;
   font-weight: 600;
   color: var(--foreground);
+  text-shadow:
+    -1px -1px 0 var(--background),
+    1px -1px 0 var(--background),
+    -1px 1px 0 var(--background),
+    1px 1px 0 var(--background);
 }
 
 .description {

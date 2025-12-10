@@ -8,6 +8,12 @@ interface ToolCallResult {
   input: Record<string, unknown>;
 }
 
+interface ImageData {
+  type: "base64";
+  mediaType: "image/png" | "image/jpeg" | "image/gif" | "image/webp";
+  data: string;
+}
+
 interface InferenceRequest {
   systemPrompt: string;
   userMessage: string;
@@ -15,6 +21,7 @@ interface InferenceRequest {
   temperature: number;
   tools?: Tool[];
   toolChoice?: "auto" | "any" | { type: "tool"; name: string };
+  images?: ImageData[];
 }
 
 interface InferenceResponse {
@@ -26,7 +33,7 @@ interface InferenceResponse {
 export async function POST(request: NextRequest): Promise<NextResponse<InferenceResponse>> {
   try {
     const body: InferenceRequest = await request.json();
-    const { systemPrompt, userMessage, model, temperature, tools, toolChoice } = body;
+    const { systemPrompt, userMessage, model, temperature, tools, toolChoice, images } = body;
 
     if (!userMessage?.trim()) {
       return NextResponse.json(
@@ -56,12 +63,37 @@ export async function POST(request: NextRequest): Promise<NextResponse<Inference
       },
     });
 
+    // Build message content (text + optional images)
+    type MediaType = "image/png" | "image/jpeg" | "image/gif" | "image/webp";
+    type ContentBlock =
+      | { type: "text"; text: string }
+      | { type: "image"; source: { type: "base64"; media_type: MediaType; data: string } };
+
+    const messageContent: ContentBlock[] = [];
+
+    // Add images first (Claude processes images better when they come before text)
+    if (images && images.length > 0) {
+      for (const img of images) {
+        messageContent.push({
+          type: "image",
+          source: {
+            type: "base64",
+            media_type: img.mediaType as MediaType,
+            data: img.data,
+          },
+        });
+      }
+    }
+
+    // Add the text message
+    messageContent.push({ type: "text", text: userMessage });
+
     // Build the request options
     const requestOptions: Parameters<typeof client.messages.create>[0] = {
       model,
       max_tokens: 1024,
       system: systemPrompt,
-      messages: [{ role: "user", content: userMessage }],
+      messages: [{ role: "user", content: messageContent }],
       temperature,
     };
 

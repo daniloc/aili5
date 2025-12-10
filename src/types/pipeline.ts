@@ -20,6 +20,7 @@ export type NodeType =
   | "user_input"
   | "url_loader"
   | "text_input"
+  | "paint"
   | "inference"
   | "text_display"
   | "color_display"
@@ -56,6 +57,11 @@ export interface TextInputConfig {
   label?: string;
   /** Placeholder text */
   placeholder?: string;
+}
+
+export interface PaintConfig {
+  /** Label for this paint canvas */
+  label?: string;
 }
 
 export interface InferenceConfig {
@@ -141,6 +147,7 @@ export interface NodeConfigByType {
   user_input: UserInputConfig;
   url_loader: URLLoaderConfig;
   text_input: TextInputConfig;
+  paint: PaintConfig;
   inference: InferenceConfig;
   text_display: TextDisplayConfig;
   color_display: ColorDisplayConfig;

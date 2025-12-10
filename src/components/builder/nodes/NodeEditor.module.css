@@ -864,3 +864,83 @@
   background: color-mix(in srgb, var(--foreground) 8%, transparent);
   border: 1px solid color-mix(in srgb, var(--foreground) 15%, transparent);
 }
+
+/* Paint canvas specific styles */
+.paintToolbar {
+  display: flex;
+  gap: 0.375rem;
+  margin-bottom: 0.5rem;
+}
+
+.paintToolButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 20%, transparent);
+  border-radius: 6px;
+  background: transparent;
+  color: color-mix(in srgb, var(--foreground) 60%, transparent);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.paintToolButton:hover {
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+  color: var(--foreground);
+}
+
+.paintToolActive {
+  background: var(--foreground);
+  color: var(--background);
+  border-color: var(--foreground);
+}
+
+.paintToolActive:hover {
+  background: var(--foreground);
+  color: var(--background);
+}
+
+.paintClearButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.75rem;
+  height: 32px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 20%, transparent);
+  border-radius: 6px;
+  background: transparent;
+  color: color-mix(in srgb, var(--foreground) 60%, transparent);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-left: auto;
+}
+
+.paintClearButton:hover {
+  background: color-mix(in srgb, #ef4444 10%, transparent);
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.paintCanvasContainer {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  background: color-mix(in srgb, var(--foreground) 4%, transparent);
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 15%, transparent);
+}
+
+.paintCanvas {
+  width: 100%;
+  max-width: 300px;
+  aspect-ratio: 1;
+  border-radius: 4px;
+  cursor: crosshair;
+  background: #ffffff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
+}

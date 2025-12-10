@@ -8,7 +8,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, X, HelpCircle } from "lucide-react";
+import { GripVertical, XCircle, HelpCircle } from "lucide-react";
 import { PipeIcon } from "./PipeIcon";
 import type {
   PipelineNodeConfig,
@@ -172,7 +172,7 @@ function SortableNode({
                 <Icon size={16} />
               </div>
             )}
-            <span className={styles.nodeName}>{moduleInfo?.name || node.type}</span>
+            <h1 className={styles.nodeName}>{moduleInfo?.name || node.type}</h1>
             {genieHasUpdate && (
               <span className={styles.notificationDot} title="Backstory updated" />
             )}
@@ -199,7 +199,7 @@ function SortableNode({
                 }}
                 title="Remove node"
               >
-                <X size={14} />
+                <XCircle size={18} />
               </button>
             )}
           </div>

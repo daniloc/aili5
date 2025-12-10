@@ -16,6 +16,7 @@ import {
   Sparkles,
   Smile,
   HelpCircle,
+  Paintbrush,
   type LucideIcon,
 } from "lucide-react";
 import type { NodeType } from "@/types/pipeline";
@@ -71,6 +72,14 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
     icon: FileText,
     category: "input",
     color: COLORS.indigo,
+  },
+  {
+    type: "paint",
+    name: "Paint",
+    description: "Draw to add image",
+    icon: Paintbrush,
+    category: "input",
+    color: "#8B5CF6", // purple
   },
   {
     type: "inference",

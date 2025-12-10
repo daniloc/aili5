@@ -11,6 +11,7 @@ import type {
   PixelArtDisplayConfig,
   URLLoaderConfig,
   TextInputConfig,
+  PaintConfig,
   GenieConfig,
   URLContextItem,
   TextOutput,
@@ -28,6 +29,7 @@ import { EmojiDisplayNodeEditor } from "./EmojiDisplayNodeEditor";
 import { PixelArtDisplayNodeEditor } from "./PixelArtDisplayNodeEditor";
 import { URLLoaderNodeEditor } from "./URLLoaderNodeEditor";
 import { TextInputNodeEditor } from "./TextInputNodeEditor";
+import { PaintNodeEditor } from "./PaintNodeEditor";
 import { GenieNodeEditor } from "./GenieNodeEditor";
 
 interface NodeRendererProps {
@@ -146,6 +148,17 @@ export function NodeRenderer({
       return (
         <TextInputNodeEditor
           config={node.config as TextInputConfig}
+          onChange={(config) => onConfigChange(node.id, config)}
+          value={userInputValue}
+          onValueChange={(value) => onUserInputChange?.(node.id, value)}
+          nodeId={node.id}
+        />
+      );
+
+    case "paint":
+      return (
+        <PaintNodeEditor
+          config={node.config as PaintConfig}
           onChange={(config) => onConfigChange(node.id, config)}
           value={userInputValue}
           onValueChange={(value) => onUserInputChange?.(node.id, value)}

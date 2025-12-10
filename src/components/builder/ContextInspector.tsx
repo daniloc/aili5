@@ -12,6 +12,7 @@ import {
   Blocks,
   ChevronDown,
   ChevronRight,
+  Paintbrush,
 } from "lucide-react";
 import type {
   PipelineNodeConfig,
@@ -20,13 +21,14 @@ import type {
   URLContextItem,
   GenieConfig,
   TextInputConfig,
+  PaintConfig,
 } from "@/types/pipeline";
 import { generateBlockMetadata } from "@/lib/blockParsers";
 import styles from "./ContextInspector.module.css";
 
 export interface ContextSection {
   id: string;
-  type: "system_prompt" | "genie" | "url" | "text_input" | "block_metadata" | "tools";
+  type: "system_prompt" | "genie" | "url" | "text_input" | "paint" | "block_metadata" | "tools";
   sourceNodeId: string;
   title: string;
   content: string;
@@ -131,6 +133,22 @@ function gatherContextSections(
           title: config.label || "Text Input",
           content: content.trim(),
           icon: Type,
+        });
+      }
+    }
+
+    // Paint inputs
+    if (node.type === "paint") {
+      const imageData = userInputs[node.id];
+      if (imageData && imageData.startsWith("data:image/")) {
+        const config = node.config as PaintConfig;
+        sections.push({
+          id: `paint-${node.id}`,
+          type: "paint",
+          sourceNodeId: node.id,
+          title: config.label || "Drawing",
+          content: "[an image to be uploaded to the LLM for interpretation]",
+          icon: Paintbrush,
         });
       }
     }

@@ -15,9 +15,14 @@
 }
 
 .title {
-  font-size: 1rem;
+  font-size: 1.25rem;
   font-weight: 600;
   margin: 0;
+  text-shadow:
+    -1px -1px 0 var(--background),
+    1px -1px 0 var(--background),
+    -1px 1px 0 var(--background),
+    1px 1px 0 var(--background);
 }
 
 .nodeCount {
@@ -33,7 +38,17 @@
   padding: 1rem;
   border-radius: 12px;
   border: 2px dashed color-mix(in srgb, var(--foreground) 15%, transparent);
-  background: color-mix(in srgb, var(--foreground) 2%, transparent);
+  background:
+    radial-gradient(
+      circle,
+      color-mix(in srgb, var(--foreground) 12%, transparent) 6px,
+      transparent 6px
+    );
+  background-size: 40px 40px;
+  /* Offset grid to align with module corner dots */
+  background-position: 12px 12px;
+  background-attachment: local;
+  background-color: color-mix(in srgb, var(--foreground) 2%, transparent);
   min-height: 0; /* Allow shrinking in flex container */
   overflow-y: auto;
   transition: all 0.2s ease;
@@ -72,10 +87,24 @@
   flex-direction: column;
   background: var(--background);
   border: 4px solid var(--module-color);
-  border-radius: 10px;
+  border-radius: 10px 10px 0 0;
   transition: all 0.15s ease;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  overflow: hidden;
+  overflow: visible;
+  position: relative;
+}
+
+/* Colored bottom bar */
+.node::before {
+  content: "";
+  position: absolute;
+  bottom: -4px;
+  left: -4px;
+  right: -4px;
+  height: 30px;
+  background: var(--module-color);
+  border-radius: 0 0 10px 10px;
+  transform: translateY(100%);
 }
 
 .node:hover {
@@ -142,9 +171,13 @@
 }
 
 .nodeName {
-  font-size: 0.8125rem;
-  font-weight: 500;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
   color: white;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.5),
+    0 0 1px rgba(0, 0, 0, 0.8);
 }
 
 .notificationDot {
@@ -198,21 +231,21 @@
 }
 
 .removeButton {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
   border: none;
   border-radius: 6px;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.7);
+  background: rgba(0, 0, 0, 0.2);
+  color: white;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .removeButton:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.4);
   color: white;
 }
 
@@ -221,6 +254,8 @@
   align-items: center;
   justify-content: center;
   padding: 0.25rem 0;
+  /* Offset to account for the 30px colored bottom bar */
+  margin-top: 30px;
   color: color-mix(in srgb, var(--foreground) 35%, transparent);
 }
 
