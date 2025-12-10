@@ -25,50 +25,54 @@ export function TextInputTutorial() {
 
   return (
     <div className={styles.tutorial}>
-      <div className={styles.section}>
-        <h3>What is a Text Input Node?</h3>
-        <p>
-          The Text Input node lets you add custom text to the pipeline's context. This text will
-          be available to all inference nodes that come after it.
-        </p>
-      </div>
+      <div className={styles.tutorialLeft}>
+        <div className={styles.section}>
+          <h3>What is a Text Input Node?</h3>
+          <p>
+            The Text Input node lets you add custom text to the pipeline's context. This text will
+            be available to all inference nodes that come after it.
+          </p>
+        </div>
 
-      <div className={styles.section}>
-        <h3>Try it yourself</h3>
-        <div className={styles.liveDemo}>
-          <TextInputNodeEditor
-            config={config}
-            onChange={setConfig}
-            value={value}
-            onValueChange={setValue}
-            nodeId="tutorial-text-input"
-          />
-          <button
-            className={styles.addButton}
-            onClick={handleAddToContext}
-            disabled={!value.trim()}
-          >
-            Add to Context
-          </button>
+        <div className={styles.section}>
+          <h3>Context Window</h3>
+          <p>
+            Watch how your text input gets added to the context window. This context is available
+            to downstream inference nodes.
+          </p>
+          <ContextWindow items={contextItems} maxItems={5} />
+        </div>
+
+        <div className={styles.section}>
+          <h3>How it works</h3>
+          <p>
+            Text Input nodes are useful for adding static information, instructions, or examples
+            to your pipeline. The text you enter becomes part of the context that flows through
+            your pipeline, making it available to the model when generating responses.
+          </p>
         </div>
       </div>
 
-      <div className={styles.section}>
-        <h3>Context Window</h3>
-        <p>
-          Watch how your text input gets added to the context window. This context is available
-          to downstream inference nodes.
-        </p>
-        <ContextWindow items={contextItems} maxItems={5} />
-      </div>
-
-      <div className={styles.section}>
-        <h3>How it works</h3>
-        <p>
-          Text Input nodes are useful for adding static information, instructions, or examples
-          to your pipeline. The text you enter becomes part of the context that flows through
-          your pipeline, making it available to the model when generating responses.
-        </p>
+      <div className={styles.tutorialRight}>
+        <div className={styles.section}>
+          <h3>Try it yourself</h3>
+          <div className={styles.liveDemo}>
+            <TextInputNodeEditor
+              config={config}
+              onChange={setConfig}
+              value={value}
+              onValueChange={setValue}
+              nodeId="tutorial-text-input"
+            />
+            <button
+              className={styles.addButton}
+              onClick={handleAddToContext}
+              disabled={!value.trim()}
+            >
+              Add to Context
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

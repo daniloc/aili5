@@ -24,37 +24,41 @@ export function PixelArtDisplayTutorial() {
 
   return (
     <div className={styles.tutorial}>
-      <div className={styles.section}>
-        <h3>What is a Pixel Art Display Node?</h3>
-        <p>
-          The Pixel Art Display node shows pixel art images that the model generates. The model
-          can output a grid of colors, and this node displays them as pixel art.
-        </p>
-      </div>
+      <div className={styles.tutorialLeft}>
+        <div className={styles.section}>
+          <h3>What is a Pixel Art Display Node?</h3>
+          <p>
+            The Pixel Art Display node shows pixel art images that the model generates. The model
+            can output a grid of colors, and this node displays them as pixel art.
+          </p>
+        </div>
 
-      <div className={styles.section}>
-        <h3>Try it yourself</h3>
-        <button className={styles.generateButton} onClick={handleGeneratePixelArt}>
-          Generate Sample Pixel Art
-        </button>
-        <div className={styles.liveDemo}>
-          <PixelArtDisplayNodeEditor
-            config={config}
-            onChange={setConfig}
-            output={output}
-            loading={false}
-          />
+        <div className={styles.section}>
+          <h3>How it works</h3>
+          <p>
+            When an inference node calls the <code>display_pixel_art</code> tool, it specifies
+            a grid of colors (pixels). The Pixel Art Display node receives this and renders it
+            as pixel art. This is useful for generating simple images, patterns, or visual
+            representations.
+          </p>
         </div>
       </div>
 
-      <div className={styles.section}>
-        <h3>How it works</h3>
-        <p>
-          When an inference node calls the <code>display_pixel_art</code> tool, it specifies
-          a grid of colors (pixels). The Pixel Art Display node receives this and renders it
-          as pixel art. This is useful for generating simple images, patterns, or visual
-          representations.
-        </p>
+      <div className={styles.tutorialRight}>
+        <div className={styles.section}>
+          <h3>Try it yourself</h3>
+          <button className={styles.generateButton} onClick={handleGeneratePixelArt}>
+            Generate Sample Pixel Art
+          </button>
+          <div className={styles.liveDemo}>
+            <PixelArtDisplayNodeEditor
+              config={config}
+              onChange={setConfig}
+              output={output}
+              loading={false}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
