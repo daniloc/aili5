@@ -92,12 +92,13 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Create a streaming response
+    // Use non-streaming API and simulate streaming to client
+    // (PostHog LLM gateway may not support true SSE streaming)
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          const messageStream = await client.messages.stream({
+          const message = await client.messages.create({
             model,
             max_tokens: 1024,
             system: systemPrompt,
@@ -105,16 +106,21 @@ export async function POST(request: NextRequest) {
             temperature,
           });
 
-          for await (const event of messageStream) {
-            if (event.type === "content_block_delta") {
-              const delta = event.delta;
-              if ("text" in delta) {
-                // Send text chunk as SSE
-                controller.enqueue(
-                  encoder.encode(`data: ${JSON.stringify({ text: delta.text })}\n\n`)
-                );
-              }
+          // Extract text from response
+          let fullText = "";
+          for (const block of message.content) {
+            if (block.type === "text") {
+              fullText += block.text;
             }
+          }
+
+          // Send as chunks to simulate streaming
+          const chunkSize = 8;
+          for (let i = 0; i < fullText.length; i += chunkSize) {
+            const chunk = fullText.slice(i, i + chunkSize);
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify({ text: chunk })}\n\n`)
+            );
           }
 
           // Send done signal
