@@ -19,3 +19,6 @@ export const OAUTH_SCOPES = ['user:read', 'project:read', 'task:write', 'introsp
 // Cookie names
 export const AUTH_COOKIE_NAME = 'posthog_auth';
 export const OAUTH_STATE_COOKIE_NAME = 'oauth_state';
+
+// Allowed project IDs (restrict access to specific projects)
+export const ALLOWED_PROJECT_IDS = [2];

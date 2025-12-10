@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { exchangeCodeForToken, type StoredAuthData } from '@/lib/auth/oauth';
-import { AUTH_COOKIE_NAME, OAUTH_STATE_COOKIE_NAME, type OAuthRegion } from '@/lib/auth/constants';
+import { AUTH_COOKIE_NAME, OAUTH_STATE_COOKIE_NAME, ALLOWED_PROJECT_IDS, type OAuthRegion } from '@/lib/auth/constants';
 
 interface OAuthState {
   verifier: string;
@@ -68,12 +68,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${origin}/?auth_error=no_project_access`);
     }
 
+    // Find an allowed project from the user's scoped teams
+    const allowedProjectId = tokenResponse.scoped_teams.find(
+      (id) => ALLOWED_PROJECT_IDS.includes(id)
+    );
+
+    if (!allowedProjectId) {
+      cookieStore.delete(OAUTH_STATE_COOKIE_NAME);
+      return NextResponse.redirect(`${origin}/?auth_error=project_not_allowed`);
+    }
+
     // Store auth data in HttpOnly cookie
     const authData: StoredAuthData = {
       accessToken: tokenResponse.access_token,
       refreshToken: tokenResponse.refresh_token,
       expiresAt: Date.now() + (tokenResponse.expires_in * 1000),
-      projectId: tokenResponse.scoped_teams[0],
+      projectId: allowedProjectId,
       region: storedState.region,
     };
 
